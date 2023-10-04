@@ -1,0 +1,11 @@
+<launch>
+    <arg name="takeoff_height" default="1.0"/>
+    <arg name="planner_topic" default="/drone/fast_planner/waypoint"/>
+
+    <node pkg="px4_drone" name="px4_drone_node" type="px4_drone_node" output="screen">
+        <param name="takeoff_height" value="$(arg takeoff_height)"/>
+
+        <remap from="/planner" to="$(arg planner_topic)"/>
+    </node>
+
+</launch>

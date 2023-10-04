@@ -1,0 +1,55 @@
+<launch>
+    <arg name="planner_trajectory" value="/planning/pos_cmd"/>
+
+    <arg name="mavros_trajectory" value="/drone/fast_planner/waypoint"/>
+    <arg name="planner_trigger" value="/drone/fast_planner/trigger"/>
+
+    <arg name="boxes_topic" value="/yolov5/detections"/>
+
+    <!-- Gazebo -->
+    <!-- <arg name="color_topic" value="/camera/rgb/image_raw"/> -->
+    <!-- <arg name="depth_topic" value="/camera/depth/image_raw"/> -->
+
+    <!-- D435 -->
+    <arg name="color_topic" value="/camera/color/image_raw"/>
+    <arg name="depth_topic" value="/camera/aligned_depth_to_color/image_raw"/>
+
+    
+    <arg name="pose_topic" value="/mavros/local_position/pose"/>
+    <arg name="odom_topic" value="/mavros/local_position/odom"/>
+
+
+    <arg name="takeoff_height" value="2.0"/>
+
+
+    <!-- Time synchronizer of topics-->
+    <node pkg="plan_px4" name="time_sync_node" type="time_sync_node">
+        <remap from="/boxes" to="$(arg boxes_topic)"/>
+        <remap from="/color" to="$(arg color_topic)"/>
+        <remap from="/depth" to="$(arg depth_topic)"/>
+        <remap from="/pose" to="$(arg pose_topic)"/>
+        <remap from="/odom" to="$(arg odom_topic)"/>
+    </node>
+    
+
+    
+    <!-- Convert the trajectory to mavros topic-->
+    <!-- <node pkg="plan_px4" name="traj_convert_node" type="traj_convert_node">
+        <remap from="/planner_traj" to="$(arg planner_trajectory)"/>
+        <remap from="/mavros_traj" to="$(arg mavros_trajectory)"/>
+        <remap from="/trigger" to="$(arg planner_trigger)"/>
+    </node> -->
+    
+
+
+    <!-- Launch the px4_drone node-->
+    <!-- <node pkg="px4_drone" name="px4_drone_node" type="px4_drone_node" output="screen">
+        <remap from="/planner/waypoint" to="$(arg mavros_trajectory)"/>
+        <remap from="/planner/trigger" to="$(arg planner_trigger)"/>
+
+        <param name="takeoff_height" value="$(arg takeoff_height)"/>
+    </node> -->
+    
+
+
+</launch>
