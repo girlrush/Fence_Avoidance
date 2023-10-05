@@ -143,6 +143,8 @@ struct MappingData {
   std::vector<double> tmp_buffer1_;
   std::vector<double> tmp_buffer2_;
 
+  std::vector<char> fence_buffer_inflate_;
+
   // camera position and pose data
 
   Eigen::Vector3d camera_pos_, last_camera_pos_;
@@ -206,6 +208,9 @@ public:
   inline int getOccupancy(Eigen::Vector3d pos);
   inline int getOccupancy(Eigen::Vector3i id);
   inline int getInflateOccupancy(Eigen::Vector3d pos);
+  
+  inline void setFence(Eigen::Vector3d pos);
+  inline int getInflateFence(Eigen::Vector3d pos);
 
   inline void boundIndex(Eigen::Vector3i& id);
   inline bool isUnknown(const Eigen::Vector3i& id);
@@ -444,6 +449,16 @@ inline void SDFMap::setOccupied(Eigen::Vector3d pos) {
                                 id(1) * mp_.map_voxel_num_(2) + id(2)] = 1;
 }
 
+inline void SDFMap::setFence(Eigen::Vector3d pos) {
+  if (!isInMap(pos)) return;
+
+  Eigen::Vector3i id;
+  posToIndex(pos, id);
+
+  md_.fence_buffer_inflate_[id(0) * mp_.map_voxel_num_(1) * mp_.map_voxel_num_(2) +
+                                id(1) * mp_.map_voxel_num_(2) + id(2)] = 1;
+}
+
 inline void SDFMap::setOccupancy(Eigen::Vector3d pos, double occ) {
   if (occ != 1 && occ != 0) {
     cout << "occ value error!" << endl;
@@ -475,6 +490,14 @@ inline int SDFMap::getInflateOccupancy(Eigen::Vector3d pos) {
   posToIndex(pos, id);
 
   return int(md_.occupancy_buffer_inflate_[toAddress(id)]);
+}
+
+inline int SDFMap::getInflateFence(Eigen::Vector3d pos){
+  if (!isInMap(pos)) return -1;
+
+  Eigen::Vector3i id;
+  posToIndex(pos, id);
+  return int(md_.fence_buffer_inflate_[toAddress(id)]);
 }
 
 inline int SDFMap::getOccupancy(Eigen::Vector3i id) {

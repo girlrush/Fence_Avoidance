@@ -133,6 +133,8 @@ void SDFMap::initMap(ros::NodeHandle& nh) {
   md_.proj_points_.resize(640 * 480 / mp_.skip_pixel_ / mp_.skip_pixel_);
   md_.proj_points_cnt = 0;
 
+  md_.fence_buffer_inflate_ = vector<char>(buffer_size, 0);
+
   /* init callback */
 
   depth_sub_.reset(new message_filters::Subscriber<sensor_msgs::Image>(node_, "/sdf_map/depth", 50));
@@ -379,10 +381,12 @@ int SDFMap::setCacheOccupancy(Eigen::Vector3d pos, int occ) {
 
   md_.count_hit_and_miss_[idx_ctns] += 1;
 
+  // 해당 좌표에 처음 hit or miss 가 저장된 경우 cache_voxel 에 해당 좌표 저장
   if (md_.count_hit_and_miss_[idx_ctns] == 1) {
     md_.cache_voxel_.push(id);
   }
 
+  // 해당 voxel 이 occupied 인 경우 count_hit 에 voxel 의 hit 를 카운트함
   if (occ == 1) md_.count_hit_[idx_ctns] += 1;
 
   return idx_ctns;
@@ -535,6 +539,7 @@ void SDFMap::depthBoxesCallback(const sensor_msgs::Image::ConstPtr& color, const
  
 }
 
+// Depth Image 를 3차원 좌표로 변환함
 void SDFMap::projectDepthImage() {
   // md_.proj_points_.clear();
   md_.proj_points_cnt = 0;
@@ -545,103 +550,88 @@ void SDFMap::projectDepthImage() {
   int rows = md_.depth_image_.rows;
 
   double depth;
-  bool check = true;
 
   Eigen::Matrix3d camera_r = md_.camera_q_.toRotationMatrix();
 
-  // cout << "rotate: " << md_.camera_q_.toRotationMatrix() << endl;
-  // std::cout << "pos in proj: " << md_.camera_pos_ << std::endl;
-
-  if (!mp_.use_depth_filter_) {
-    for (int v = 0; v < rows; v++) {
-      row_ptr = md_.depth_image_.ptr<uint16_t>(v);
-
-      for (int u = 0; u < cols; u++) {
-
-        Eigen::Vector3d proj_pt;
-        depth = (*row_ptr++) / mp_.k_depth_scaling_factor_;
-        proj_pt(0) = (u - mp_.cx_) * depth / mp_.fx_;
-        proj_pt(1) = (v - mp_.cy_) * depth / mp_.fy_;
-        proj_pt(2) = depth;
-
-        proj_pt = camera_r * proj_pt + md_.camera_pos_;
-
-        if (u == 320 && v == 240) std::cout << "depth: " << depth << std::endl;
-        md_.proj_points_[md_.proj_points_cnt++] = proj_pt;
-      }
-    }
-  }
   /* use depth filter */ 
+  if (!md_.has_first_depth_)
+    md_.has_first_depth_ = true;
   else {
-    if (!md_.has_first_depth_)
-      md_.has_first_depth_ = true;
-    else {
-      Eigen::Vector3d pt_cur, pt_world, pt_reproj;
+    Eigen::Vector3d pt_cur, pt_world, pt_reproj;
 
-      Eigen::Matrix3d last_camera_r_inv;
-      last_camera_r_inv = md_.last_camera_q_.inverse();
-      const double inv_factor = 1.0 / mp_.k_depth_scaling_factor_; // mm 단위를 m 단위로 변환함
+    Eigen::Matrix3d last_camera_r_inv;
+    last_camera_r_inv = md_.last_camera_q_.inverse();
+    const double inv_factor = 1.0 / mp_.k_depth_scaling_factor_; // mm 단위를 m 단위로 변환함
 
-      // 이미지를 크게 팽창시키는 방법을 고안해야할 듯
+    // 철조망이 감지가 되면 해당 영역을 occupied 로 설정을 해두고, id 또는 address 를 저장을 해둔다.
+    // 만약 나중에 해당 위치를 empty 로 만들려고 하면, 이를 무시하도록 하자.
 
-      for (int v = mp_.depth_filter_margin_; v < rows - mp_.depth_filter_margin_; v += mp_.skip_pixel_)
+
+    // 일단 이 부분에서 철조망에 해당하는 3차원 좌표를 다른곳에 저장해두자.
+
+
+    for (int v = mp_.depth_filter_margin_; v < rows - mp_.depth_filter_margin_; v += mp_.skip_pixel_)
+    {
+      row_ptr = md_.depth_image_.ptr<uint16_t>(v) + mp_.depth_filter_margin_;
+
+      for (int u = mp_.depth_filter_margin_; u < cols - mp_.depth_filter_margin_; u += mp_.skip_pixel_) 
       {
-        row_ptr = md_.depth_image_.ptr<uint16_t>(v) + mp_.depth_filter_margin_;
+        bool check_in_box = false;
 
-        for (int u = mp_.depth_filter_margin_; u < cols - mp_.depth_filter_margin_; u += mp_.skip_pixel_) 
+        depth = (*row_ptr) * inv_factor;
+        row_ptr = row_ptr + mp_.skip_pixel_;
+
+
+        if (db_.check_box_ &&
+            u >= db_.last_box_.xmin && u <= db_.last_box_.xmax &&
+            v >= db_.last_box_.ymin && v <= db_.last_box_.ymax) 
         {
-          depth = (*row_ptr) * inv_factor;
-          row_ptr = row_ptr + mp_.skip_pixel_;
-
-          // 여기 함수를 수정해서 box 가 있으면 이미지의 크기를 증대해서 계산하는 방향으로 가야할 것 같은데
-
-          if (db_.check_box_ &&
-              u >= db_.last_box_.xmin && u <= db_.last_box_.xmax &&
-              v >= db_.last_box_.ymin && v <= db_.last_box_.ymax) 
-          {
-
-            // if (depth > db_.dist_)
-              depth = db_.dist_;
-          }
-
-          else {
-            if (*row_ptr == 0) {
-              depth = mp_.max_ray_length_ + 0.1; // 픽셀의 정보가 불명확한 경우 먼 거리에 있다고 판단하도록 설정
-            }
-            else if (depth < mp_.depth_filter_mindist_) {
-              continue;
-            }
-            else if (depth > mp_.depth_filter_maxdist_) {
-              depth = mp_.max_ray_length_ + 0.1;
-            }
-          }
-
-          // project to world frame (카메라 좌표를 world 로 변환)
-          pt_cur(0) = depth;
-          pt_cur(1) = -(u - mp_.cx_) * depth / mp_.fx_;
-          pt_cur(2) = -(v - mp_.cy_) * depth / mp_.fy_;
-
-          // 변환한 좌표값에 카메라 좌표와 각도를 반영함
-          pt_world = camera_r * pt_cur + md_.camera_pos_;
-
-          // if (!isInMap(pt_world)) {
-          //   pt_world = closetPointInMap(pt_world, md_.camera_pos_);
-          // }
-
-          md_.proj_points_[md_.proj_points_cnt++] = pt_world;
-
+            check_in_box = true;
+            depth = db_.dist_;
         }
-      }
 
-      db_ = {};
+        else {
+          if (*row_ptr == 0) {
+            depth = mp_.max_ray_length_ + 0.1; // 픽셀의 정보가 불명확한 경우 먼 거리에 있다고 판단하도록 설정
+          }
+          else if (depth < mp_.depth_filter_mindist_) {
+            continue;
+          }
+          else if (depth > mp_.depth_filter_maxdist_) {
+            depth = mp_.max_ray_length_ + 0.1;
+          }
+        }
+
+        // project to world frame (카메라 좌표를 world 로 변환)
+        pt_cur(0) = depth;
+        pt_cur(1) = -(u - mp_.cx_) * depth / mp_.fx_;
+        pt_cur(2) = -(v - mp_.cy_) * depth / mp_.fy_;
+
+        // 변환한 좌표값에 카메라 좌표와 각도를 반영함
+        pt_world = camera_r * pt_cur + md_.camera_pos_;
+
+        // if (!isInMap(pt_world)) {
+        //   pt_world = closetPointInMap(pt_world, md_.camera_pos_);
+        // }
+
+        md_.proj_points_[md_.proj_points_cnt++] = pt_world;
+
+        if (check_in_box)
+        {
+          Eigen::Vector3i id;
+          posToIndex(pt_world, id);
+
+          md_.fence_buffer_inflate_[id(0) * mp_.map_voxel_num_(1) * mp_.map_voxel_num_(2) +
+                            id(1) * mp_.map_voxel_num_(2) + id(2)] = 1;
+          
+        }        
+      }
     }
+    db_ = {};
   }
 
-  /* maintain camera pose for consistency check */
+  // 아니면 이 부분에 pt_world 의 마지막 열을 기준으로 z 축만 변경해서 
 
-  md_.last_camera_pos_ = md_.camera_pos_;
-  md_.last_camera_q_ = md_.camera_q_;
-  md_.last_depth_image_ = md_.depth_image_;
 }
 
 void SDFMap::raycastProcess() {
@@ -652,8 +642,8 @@ void SDFMap::raycastProcess() {
 
   md_.raycast_num_ += 1;
 
-  int vox_idx;
-  double length;
+  int vox_idx; // 좌표의 1차원 배열 index 를 의미함
+  double length; // 현재 위치와 pt_w 사이의 거리를 의미함
 
   // bounding box of updated region
   double min_x = mp_.map_max_boundary_(0);
@@ -666,13 +656,15 @@ void SDFMap::raycastProcess() {
 
   RayCaster raycaster;
   Eigen::Vector3d half = Eigen::Vector3d(0.5, 0.5, 0.5);
-  Eigen::Vector3d ray_pt, pt_w;
+  Eigen::Vector3d ray_pt, pt_w; // pt_w = point_world
 
+
+  // pt_w 에 위치한 지점을 occupied 로 설정하고 해당 지점부터 카메라 까지 이어지는 직선 경로 상에 위치한
+  // 셀들을 empty 로 설정한다.
   for (int i = 0; i < md_.proj_points_cnt; ++i) {
     pt_w = md_.proj_points_[i];
 
     // set flag for projected point
-
     if (!isInMap(pt_w)) {
       pt_w = closetPointInMap(pt_w, md_.camera_pos_);
 
@@ -680,14 +672,27 @@ void SDFMap::raycastProcess() {
       if (length > mp_.max_ray_length_) {
         pt_w = (pt_w - md_.camera_pos_) / length * mp_.max_ray_length_ + md_.camera_pos_;
       }
-      vox_idx = setCacheOccupancy(pt_w, 0);
+
+      if (getInflateFence(pt_w))
+        vox_idx = setCacheOccupancy(pt_w, 1);
+      else
+        vox_idx = setCacheOccupancy(pt_w, 0);
+      
 
     } else {
+      
+      // 현재 위치와 projected point 사이의 거리 계산
       length = (pt_w - md_.camera_pos_).norm();
 
+      // max_ray_length 를 초과하면 
       if (length > mp_.max_ray_length_) {
         pt_w = (pt_w - md_.camera_pos_) / length * mp_.max_ray_length_ + md_.camera_pos_;
-        vox_idx = setCacheOccupancy(pt_w, 0);
+
+        if (getInflateFence(pt_w))
+          vox_idx = setCacheOccupancy(pt_w, 1);
+        else
+          vox_idx = setCacheOccupancy(pt_w, 0);
+    
       } else {
         vox_idx = setCacheOccupancy(pt_w, 1);
       }
@@ -702,7 +707,7 @@ void SDFMap::raycastProcess() {
     min_z = min(min_z, pt_w(2));
 
     // raycasting between camera center and point
-
+    // 현재의 Voxel 이 이번 raycast 에서 처리가 되었는지 확인하고 표시함.
     if (vox_idx != INVALID_IDX) {
       if (md_.flag_rayend_[vox_idx] == md_.raycast_num_) {
         continue;
@@ -711,16 +716,26 @@ void SDFMap::raycastProcess() {
       }
     }
 
+    // world_point 와 camera_pos 를 그리드 인덱스로 변환하여 raycast의 파라미터를 설정함.
+    // resolution = 0.1 일 경우, 소수점 첫번째 자리수 까지만 포함한다.
     raycaster.setInput(pt_w / mp_.resolution_, md_.camera_pos_ / mp_.resolution_);
 
+
+    // step 을 통해 pt_w 부터 camera_pos 까지 이어지는 직선 경로 상에 위치한 셀을 empty 로 설정한다.
     while (raycaster.step(ray_pt)) {
+      // half 는 그리드 셀의 중심을 의미함. 
+      // 즉, point 하나가 정사각형의 셀을 의미한다고 할 때, 0.5 를 더하여 셀의 중심에 위치하도록 3차원 좌표값을 설정함.
+      // 그런데 occupied 셀을 설정할때는 0.5 를 안더하는데 여기서는 더해서 계산하는 이유가 뭐지?
       Eigen::Vector3d tmp = (ray_pt + half) * mp_.resolution_;
       length = (tmp - md_.camera_pos_).norm();
 
       // if (length < mp_.min_ray_length_) break;
 
-      vox_idx = setCacheOccupancy(tmp, 0);
-
+      if (getInflateFence(tmp))
+        vox_idx = setCacheOccupancy(tmp, 1);
+      else
+        vox_idx = setCacheOccupancy(tmp, 0);
+      
       if (vox_idx != INVALID_IDX) {
         if (md_.flag_traverse_[vox_idx] == md_.raycast_num_) {
           break;

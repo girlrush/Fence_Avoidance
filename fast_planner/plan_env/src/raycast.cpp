@@ -36,6 +36,7 @@ double mod(double value, double modulus) {
   return fmod(fmod(value, modulus) + modulus, modulus);
 }
 
+// 소수점을 가진 그리드가 정수 즉 그리드에 위치하기 위해 필요한 step 의 개수를 의미함
 double intbound(double s, double ds) {
   // Find the smallest positive t such that s+t*ds is an integer.
   if (ds < 0) {
@@ -69,6 +70,8 @@ void Raycast(const Eigen::Vector3d& start, const Eigen::Vector3d& end, const Eig
   // tMaxX, tMaxY, and tMaxZ.
 
   // Cube containing origin point.
+
+  // 
   int x = (int)std::floor(start.x());
   int y = (int)std::floor(start.y());
   int z = (int)std::floor(start.z());
@@ -78,7 +81,7 @@ void Raycast(const Eigen::Vector3d& start, const Eigen::Vector3d& end, const Eig
   Eigen::Vector3d direction = (end - start);
   double maxDist = direction.squaredNorm();
 
-  // Break out direction vector.
+  // Break out direction vector. (방향 벡터)
   double dx = endX - x;
   double dy = endY - y;
   double dz = endZ - z;
@@ -94,7 +97,7 @@ void Raycast(const Eigen::Vector3d& start, const Eigen::Vector3d& end, const Eig
   double tMaxY = intbound(start.y(), dy);
   double tMaxZ = intbound(start.z(), dz);
 
-  // The change in t when taking a step (always positive).
+  // The change in t when taking a step (always positive). (방향을 제거한 스칼라 값)
   double tDeltaX = ((double)stepX) / dx;
   double tDeltaY = ((double)stepY) / dy;
   double tDeltaZ = ((double)stepZ) / dz;
@@ -258,6 +261,7 @@ bool RayCaster::setInput(const Eigen::Vector3d& start,
   // max_ = max;
   // min_ = min;
 
+  // 각각의 좌표들을 정수로 변환하여 저장함.
   x_ = (int)std::floor(start_.x());
   y_ = (int)std::floor(start_.y());
   z_ = (int)std::floor(start_.z());
@@ -267,7 +271,7 @@ bool RayCaster::setInput(const Eigen::Vector3d& start,
   direction_ = (end_ - start_);
   maxDist_ = direction_.squaredNorm();
 
-  // Break out direction vector.
+  // Break out direction vector.(방향 벡터 저장)
   dx_ = endX_ - x_;
   dy_ = endY_ - y_;
   dz_ = endZ_ - z_;
@@ -279,11 +283,13 @@ bool RayCaster::setInput(const Eigen::Vector3d& start,
 
   // See description above. The initial values depend on the fractional
   // part of the origin.
+  // (정수가 되기 위해 필요한 step 의 갯수)
   tMaxX_ = intbound(start_.x(), dx_);
   tMaxY_ = intbound(start_.y(), dy_);
   tMaxZ_ = intbound(start_.z(), dz_);
 
   // The change in t when taking a step (always positive).
+  // 한 스텝의 크기 (방향은 없고 스칼라만 존재하므로 항상 양수이다)
   tDeltaX_ = ((double)stepX_) / dx_;
   tDeltaY_ = ((double)stepY_) / dy_;
   tDeltaZ_ = ((double)stepZ_) / dz_;
@@ -303,6 +309,8 @@ bool RayCaster::step(Eigen::Vector3d& ray_pt) {
   // if (x_ >= min_.x() && x_ < max_.x() && y_ >= min_.y() && y_ < max_.y() &&
   // z_ >= min_.z() && z_ <
   // max_.z())
+
+  // raycast point 는 world point를 지도의 인덱스로 변환한 정수 좌표임
   ray_pt = Eigen::Vector3d(x_, y_, z_);
 
   // step_num_++;
