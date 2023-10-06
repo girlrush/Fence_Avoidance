@@ -206,6 +206,13 @@ int KinodynamicAstar::search(Eigen::Vector3d start_pt, Eigen::Vector3d start_v, 
           continue;
         }
 
+        Eigen::Vector3d pro_p = pro_state.head(3);
+        if (pro_p(2) <= edt_environment_->sdf_map_->getGround())
+        {
+          // std::cout << "ground" << std::endl;
+          continue;
+        }
+
         // Check not in the same voxel
         Eigen::Vector3i diff = pro_id - cur_node->index;
         int diff_time = pro_t_id - cur_node->time_idx;
@@ -226,6 +233,11 @@ int KinodynamicAstar::search(Eigen::Vector3d start_pt, Eigen::Vector3d start_v, 
           stateTransit(cur_state, xt, um, dt);
           pos = xt.head(3);
           if (edt_environment_->sdf_map_->getInflateOccupancy(pos) == 1 )
+          {
+            is_occ = true;
+            break;
+          }
+          else if(pos(2) <= edt_environment_->sdf_map_->getGround())
           {
             is_occ = true;
             break;

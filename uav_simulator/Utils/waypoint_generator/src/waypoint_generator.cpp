@@ -178,7 +178,7 @@ void goal_callback(const geometry_msgs::PoseStamped::ConstPtr& msg) {
             if (pt.pose.position.z == 0)
             {
                 printf("[waypoint gen] altitude changed \n");
-                pt.pose.position.z = 2;
+                pt.pose.position.z = 1.5;
             }
 
             // 여기 추가

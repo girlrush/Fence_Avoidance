@@ -248,6 +248,8 @@ public:
   Eigen::Vector3d getOrigin();
   int getVoxelNum();
 
+  double getGround();
+
   typedef std::shared_ptr<SDFMap> Ptr;
 
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW

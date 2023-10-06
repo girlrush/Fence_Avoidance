@@ -123,7 +123,7 @@
     <param name="manager/use_optimization" value="true" type="bool"/>
 
   <!-- kinodynamic path searching -->
-    <param name="search/max_tau" value="1.0" type="double"/>
+    <param name="search/max_tau" value="1.2" type="double"/>
     <param name="search/init_max_tau" value="1.0" type="double"/>
     <param name="search/max_vel" value="$(arg max_vel)" type="double"/>
     <param name="search/max_acc" value="$(arg max_acc)" type="double"/>

@@ -1423,6 +1423,8 @@ void SDFMap::checkDist() {
       }
 }
 
+double SDFMap::getGround(){return mp_.ground_height_; }
+
 bool SDFMap::odomValid() { return md_.has_odom_; }
 
 bool SDFMap::hasDepthObservation() { return md_.has_first_depth_; }
