@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(plan_env)
 
-find_package(OpenCV REQUIRED)
+find_package(OpenCV 4 REQUIRED)
 
 
 find_package(catkin REQUIRED COMPONENTS
@@ -47,6 +47,7 @@ add_library( plan_env
 target_link_libraries( plan_env
     ${catkin_LIBRARIES} 
     ${PCL_LIBRARIES} 
+    ${OpenCV_LIBRARIES}
     )  
 
 add_executable(obj_generator
