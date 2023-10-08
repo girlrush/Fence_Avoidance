@@ -28,6 +28,8 @@ nav_msgs::Path waypoints;
 std::deque<nav_msgs::Path> waypointSegments;
 ros::Time trigged_time;
 
+double waypoint_height;
+
 
 void load_seg(ros::NodeHandle& nh, int segid, const ros::Time& time_base) {
     std::string seg_str = boost::str(bfmt("seg%d/") % segid);
@@ -178,10 +180,8 @@ void goal_callback(const geometry_msgs::PoseStamped::ConstPtr& msg) {
             if (pt.pose.position.z == 0)
             {
                 printf("[waypoint gen] altitude changed \n");
-                pt.pose.position.z = 1.5;
+                pt.pose.position.z = 3.0;
             }
-
-            // 여기 추가
 
             time_t curTime = time(NULL);
             struct tm *pLocal = localtime(&curTime);
@@ -260,11 +260,15 @@ int main(int argc, char** argv) {
     ros::init(argc, argv, "waypoint_generator");
     ros::NodeHandle n("~");
     n.param("waypoint_type", waypoint_type, string("manual"));
+    n.param("waypoint_height", waypoint_height, 1.0);
     ros::Subscriber sub1 = n.subscribe("odom", 10, odom_callback);
     ros::Subscriber sub2 = n.subscribe("goal", 10, goal_callback);
     ros::Subscriber sub3 = n.subscribe("traj_start_trigger", 10, traj_start_trigger_callback);
     pub1 = n.advertise<nav_msgs::Path>("waypoints", 50);
     pub2 = n.advertise<geometry_msgs::PoseArray>("waypoints_vis", 10);
+
+    // n.getParam("waypoint_height", waypoint_height);
+
 
     trigged_time = ros::Time(0);
 
