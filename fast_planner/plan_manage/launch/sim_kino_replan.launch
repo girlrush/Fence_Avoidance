@@ -32,8 +32,7 @@
 
     <!-- intrinsic params of the depth camera -->
 
-    <!-- gazebo depth camera intrinsic -->
-    <!-- width = 848 , height = 480-->
+    <!-- gazebo depth camera intrinsic (848x480) -->
     <arg name="cx" value="424.5"/>
     <arg name="cy" value="240.5"/>
     <arg name="fx" value="749.421186242581"/>

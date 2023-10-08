@@ -10,12 +10,13 @@
     <arg name="color_topic" value="/camera/color/image_raw"/>
     <arg name="depth_topic" value="/camera/aligned_depth_to_color/image_raw"/>
 
-
+    
     <arg name="pose_topic" value="/mavros/local_position/pose"/>
     <arg name="odom_topic" value="/mavros/local_position/odom"/>
 
 
     <arg name="takeoff_height" value="2.0"/>
+
 
     <!-- Time synchronizer of topics-->
     <node pkg="plan_px4" name="time_sync_node" type="time_sync_node">
