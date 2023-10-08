@@ -554,6 +554,10 @@ void SDFMap::projectDepthImage() {
 
   double depth;
 
+  // vector<Eigen::Vector3d> temp;
+  // int max_v = (((rows-2*mp_.depth_filter_margin_)-1)/mp_.skip_pixel_)*mp_.skip_pixel_ + mp_.depth_filter_margin_;
+  // double max_height = 0;
+
   Eigen::Matrix3d camera_r = md_.camera_q_.toRotationMatrix();
 
   /* use depth filter */ 
@@ -569,9 +573,8 @@ void SDFMap::projectDepthImage() {
     // 철조망이 감지가 되면 해당 영역을 occupied 로 설정을 해두고, id 또는 address 를 저장을 해둔다.
     // 만약 나중에 해당 위치를 empty 로 만들려고 하면, 이를 무시하도록 하자.
 
+
     // 일단 이 부분에서 철조망에 해당하는 3차원 좌표를 다른곳에 저장해두자.
-
-
     for (int v = mp_.depth_filter_margin_; v < rows - mp_.depth_filter_margin_; v += mp_.skip_pixel_)
     {
       row_ptr = md_.depth_image_.ptr<uint16_t>(v) + mp_.depth_filter_margin_;
@@ -590,6 +593,7 @@ void SDFMap::projectDepthImage() {
         {
             check_in_box = true;
             depth = db_.dist_;
+
         }
 
         else {
@@ -621,15 +625,38 @@ void SDFMap::projectDepthImage() {
 
           md_.fence_buffer_inflate_[id(0) * mp_.map_voxel_num_(1) * mp_.map_voxel_num_(2) +
                             id(1) * mp_.map_voxel_num_(2) + id(2)] = 1;
+        }
+
+        // 철조망의 범위를 ground 까지 확장하려고 했는데 실패함
+        // if (check_in_box && v >= max_v)
+        // {
+        //   temp.push_back(pt_world);
           
-        }        
+        //   if (pt_world(2) > max_height)
+        //     max_height = pt_world(2);
+        // }
       }
     }
+
+    // 철조망의 범위를 ground 까지 확장하려고 했는데 실패함
+    // for (double i = max_height; i>mp_.ground_height_ ; i -= 0.2)
+    // {
+    //   for (int j = 0; j< temp.size(); j++)
+    //   {
+    //     Eigen::Vector3d pt = temp.at(j);
+    //     pt(2) = i;
+    //     md_.proj_points_[md_.proj_points_cnt++] = pt;
+
+    //     Eigen::Vector3i id;
+    //     posToIndex(pt, id);
+
+    //     md_.fence_buffer_inflate_[id(0) * mp_.map_voxel_num_(1) * mp_.map_voxel_num_(2) +
+    //                       id(1) * mp_.map_voxel_num_(2) + id(2)] = 1;
+    //   }
+    // }
+
     db_ = {};
   }
-
-  // 아니면 이 부분에 pt_world 의 마지막 열을 기준으로 z 축만 변경해서 
-
 }
 
 void SDFMap::raycastProcess() {
