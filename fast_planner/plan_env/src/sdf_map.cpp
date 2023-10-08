@@ -523,11 +523,14 @@ void SDFMap::depthBoxesCallback(const sensor_msgs::Image::ConstPtr& color, const
 
   printf("[num : %ld][median : %lf] [average : %lf] \n", depth_list.size(), median, average);
 
+  double distance = average / mp_.k_depth_scaling_factor_;
+  if (distance < mp_.depth_filter_mindist_ || distance > mp_.depth_filter_maxdist_)
+    return;
+  
   db_.check_box_ = true;
   db_.last_box_ = best_box;
   db_.last_pos_ = md_.camera_pos_;
   db_.dist_ = average / mp_.k_depth_scaling_factor_;
-
 
   // depth_list::DepthList depth_list_msg;
   // depth_list_msg.data = depth_list;
@@ -565,7 +568,6 @@ void SDFMap::projectDepthImage() {
 
     // 철조망이 감지가 되면 해당 영역을 occupied 로 설정을 해두고, id 또는 address 를 저장을 해둔다.
     // 만약 나중에 해당 위치를 empty 로 만들려고 하면, 이를 무시하도록 하자.
-
 
     // 일단 이 부분에서 철조망에 해당하는 3차원 좌표를 다른곳에 저장해두자.
 
@@ -609,10 +611,6 @@ void SDFMap::projectDepthImage() {
 
         // 변환한 좌표값에 카메라 좌표와 각도를 반영함
         pt_world = camera_r * pt_cur + md_.camera_pos_;
-
-        // if (!isInMap(pt_world)) {
-        //   pt_world = closetPointInMap(pt_world, md_.camera_pos_);
-        // }
 
         md_.proj_points_[md_.proj_points_cnt++] = pt_world;
 
@@ -678,6 +676,8 @@ void SDFMap::raycastProcess() {
       else
         vox_idx = setCacheOccupancy(pt_w, 0);
       
+      // vox_idx = setCacheOccupancy(pt_w, 0);
+      
 
     } else {
       
@@ -692,6 +692,8 @@ void SDFMap::raycastProcess() {
           vox_idx = setCacheOccupancy(pt_w, 1);
         else
           vox_idx = setCacheOccupancy(pt_w, 0);
+        
+        // vox_idx = setCacheOccupancy(pt_w, 0);
     
       } else {
         vox_idx = setCacheOccupancy(pt_w, 1);
@@ -735,6 +737,8 @@ void SDFMap::raycastProcess() {
         vox_idx = setCacheOccupancy(tmp, 1);
       else
         vox_idx = setCacheOccupancy(tmp, 0);
+        
+      // vox_idx = setCacheOccupancy(tmp, 0);
       
       if (vox_idx != INVALID_IDX) {
         if (md_.flag_traverse_[vox_idx] == md_.raycast_num_) {

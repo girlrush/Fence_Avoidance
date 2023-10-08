@@ -6,9 +6,9 @@
 
     <arg name="boxes_topic" value="/yolov5/detections"/>
 
-    <!-- D435 -->
-    <arg name="color_topic" value="/camera/color/image_raw"/>
-    <arg name="depth_topic" value="/camera/aligned_depth_to_color/image_raw"/>
+    <!-- Gazebo -->
+    <arg name="color_topic" value="/camera/rgb/image_raw"/>
+    <arg name="depth_topic" value="/camera/depth/image_raw"/>
 
 
     <arg name="pose_topic" value="/mavros/local_position/pose"/>
@@ -16,6 +16,7 @@
 
 
     <arg name="takeoff_height" value="2.0"/>
+
 
     <!-- Time synchronizer of topics-->
     <node pkg="plan_px4" name="time_sync_node" type="time_sync_node">
@@ -26,8 +27,6 @@
         <remap from="/odom" to="$(arg odom_topic)"/>
     </node>
     
-
-    
     <!-- Convert the trajectory to mavros topic-->
     <node pkg="plan_px4" name="traj_convert_node" type="traj_convert_node">
         <remap from="/planner_traj" to="$(arg planner_trajectory)"/>
@@ -35,7 +34,6 @@
         <remap from="/trigger" to="$(arg planner_trigger)"/>
     </node>
     
-
 
     <!-- Launch the px4_drone node-->
     <node pkg="px4_drone" name="px4_drone_node" type="px4_drone_node" output="screen">

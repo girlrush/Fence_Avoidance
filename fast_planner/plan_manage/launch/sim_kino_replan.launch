@@ -10,7 +10,7 @@
   <arg name="odom_topic" value="/sync/local_position/odom"/>
 
   <!-- main algorithm params -->
-  <include file="$(find plan_manage)/launch/kino_algorithm.xml">
+  <include file="$(find plan_manage)/launch/sim_kino_algorithm.xml">
 
     <arg name="map_size_x_" value="$(arg map_size_x)"/>
     <arg name="map_size_y_" value="$(arg map_size_y)"/>
@@ -33,10 +33,11 @@
     <!-- intrinsic params of the depth camera -->
 
     <!-- gazebo depth camera intrinsic -->
-    <arg name="cx" value="320.5"/>
+    <!-- width = 848 , height = 480-->
+    <arg name="cx" value="424.5"/>
     <arg name="cy" value="240.5"/>
-    <arg name="fx" value="565.6008952774197"/>
-    <arg name="fy" value="565.6008952774197"/>
+    <arg name="fx" value="749.421186242581"/>
+    <arg name="fy" value="749.421186242581"/>
 
     <!-- maximum velocity and acceleration the drone will reach -->
     <arg name="max_vel" value="0.5" /><!--Best=1.5-->
