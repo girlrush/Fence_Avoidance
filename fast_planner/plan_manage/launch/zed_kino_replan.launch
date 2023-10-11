@@ -10,7 +10,7 @@
   <arg name="odom_topic" value="/sync/local_position/odom"/>
 
   <!-- main algorithm params -->
-  <include file="$(find plan_manage)/launch/kino_algorithm.xml">
+  <include file="$(find plan_manage)/launch/zed_kino_algorithm.xml">
 
     <arg name="map_size_x_" value="$(arg map_size_x)"/>
     <arg name="map_size_y_" value="$(arg map_size_y)"/>
@@ -21,7 +21,6 @@
     <!-- depth topic: depth image, 640x480 by default -->
     <!-- don't set cloud_topic if you already set these ones! -->
     <arg name="camera_pose_topic" value="/sync/local_position/pose"/>
-    
     <arg name="depth_topic" value="/sync/depth/image_raw"/>
     <arg name="color_topic" value="/sync/color/image_raw"/>
 

@@ -521,7 +521,7 @@ void SDFMap::depthBoxesCallback(const sensor_msgs::Image::ConstPtr& color, const
   double average = std::accumulate(depth_list.begin(), depth_list.end(), 0.0) / depth_list.size();
 
 
-  printf("[num : %ld][median : %lf] [average : %lf] \n", depth_list.size(), median, average);
+  // printf("[num : %ld][median : %lf] [average : %lf] \n", depth_list.size(), median, average);
 
   double distance = average / mp_.k_depth_scaling_factor_;
   if (distance < mp_.depth_filter_mindist_ || distance > mp_.depth_filter_maxdist_)
