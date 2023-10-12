@@ -24,7 +24,7 @@ void Drone::CallbackState(const mavros_msgs::State::ConstPtr& state_msg)
                 set_localRaw.position.z = takeoff_height;
             }
         }
-    }    
+    }
 
     // Check armming and chage state
     if (current_state.armed != state_msg->armed)
@@ -45,6 +45,7 @@ void Drone::CallbackState(const mavros_msgs::State::ConstPtr& state_msg)
         }
         else{
             ROS_ERROR("[EMERGENCY] Dump Value : %d", state_msg->system_status);
+            _Shutdown();
             return;
         }
     }
@@ -61,7 +62,25 @@ void Drone::CallbackPose(const geometry_msgs::PoseStamped::ConstPtr& pose_msg)
     current_yaw = e[2];
 }
 
+void Drone::CallbackVelocity(const geometry_msgs::TwistStamped::ConstPtr& vel_msg)
+{
+    Eigen::Vector3d diff_vel;
+    
+    current_velocity(0) = vel_msg->twist.linear.x;
+    current_velocity(1) = vel_msg->twist.linear.y;
+    current_velocity(2) = vel_msg->twist.linear.z;
+    
+    if (current_velocity.norm() >= 2.0)
+    {
+        ChangeMode("AUTO.LAND");
+        ROS_ERROR("[EMERGENCY] High speed (%lf, %lf, %lf)", current_velocity(0), current_velocity(1), current_velocity(2));
+        return;
+    }
+}
+
+
 void Drone::CallbackPlanner(const mavros_msgs::PositionTarget::ConstPtr& planner_msg)
 {
     set_localRaw = *planner_msg;
 }
+

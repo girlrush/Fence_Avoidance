@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0.2)
+cmake_minimum_required(VERSION 2.8.3)
 project(px4_drone)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
@@ -13,6 +13,8 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
 )
+
+find_package(Eigen3 REQUIRED)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -120,6 +122,9 @@ include_directories(
   include
   include/${PROJECT_NAME}
   ${catkin_INCLUDE_DIRS}
+  ${Eigen3_INCLUDE_DIRS}
+  /usr/include/eigen3
+
 )
 
 ## Declare a C++ library
@@ -144,7 +149,7 @@ add_executable(px4_drone_node
   src/convert.cpp
   src/keyboard.cpp
 )
-target_link_libraries(px4_drone_node ${catkin_LIBRARIES} )
+target_link_libraries(px4_drone_node ${catkin_LIBRARIES} ${Eigen3_LIBRARIES})
 
 
 

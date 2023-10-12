@@ -2,6 +2,7 @@
 
 #include <ros/ros.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/TwistStamped.h>
 #include <std_msgs/Empty.h>
 #include <std_msgs/Bool.h>
 
@@ -10,6 +11,7 @@
 #include <mavros_msgs/SetMode.h>
 #include <mavros_msgs/State.h>
 
+#include <Eigen/Eigen>
 #include <map>
 
 class Drone{
@@ -23,12 +25,14 @@ class Drone{
         ros::Subscriber sub_state;
         ros::Subscriber sub_pose;
         ros::Subscriber sub_planner;
+        ros::Subscriber sub_velocity;
 
         ros::ServiceClient client_arm;
         ros::ServiceClient client_mode;
 
         mavros_msgs::PositionTarget set_localRaw;
         geometry_msgs::PoseStamped current_pose;
+        Eigen::Vector3d current_velocity;
 
         double current_yaw = 0; //Radian
 
@@ -66,10 +70,10 @@ class Drone{
 
         void CallbackState(const mavros_msgs::State::ConstPtr& state_msg);
         void CallbackPose(const geometry_msgs::PoseStamped::ConstPtr& pose_msg);
+        void CallbackVelocity(const geometry_msgs::TwistStamped::ConstPtr& vel_msg);
 
         void SetPlanner();
         void CallbackPlanner(const mavros_msgs::PositionTarget::ConstPtr& planner_msg);
-
 
     public:
         explicit Drone(const ros::NodeHandle& _nodeHandle);
