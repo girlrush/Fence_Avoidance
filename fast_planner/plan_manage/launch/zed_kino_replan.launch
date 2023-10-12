@@ -7,7 +7,9 @@
   <arg name="waypoint_num" value="3"/>
 
   <!-- topic of your odometry such as VIO or LIO -->
+  <!-- <arg name="odom_topic" value="/zed2i/zed_node/odom"/> -->
   <arg name="odom_topic" value="/sync/local_position/odom"/>
+
 
   <!-- main algorithm params -->
   <include file="$(find plan_manage)/launch/zed_kino_algorithm.xml">
@@ -20,11 +22,16 @@
     <!-- camera pose: transform of camera frame in the world frame -->
     <!-- depth topic: depth image, 640x480 by default -->
     <!-- don't set cloud_topic if you already set these ones! -->
-    <arg name="camera_pose_topic" value="/sync/local_position/pose"/>
-    <arg name="depth_topic" value="/sync/depth/image_raw"/>
-    <arg name="color_topic" value="/sync/color/image_raw"/>
+    <arg name="camera_pose_topic" value="/zed2i/zed_node/pose"/>
+    <arg name="depth_topic" value="/zed2i/zed_node/depth/depth_registered"/>
+    <arg name="gray_topic" value="/zed2i/zed_node/left/image_rect_gray"/>
+    <arg name="boxes_topic" value="/yolov5/detections"/>
 
-    <arg name="boxes_topic" value="/sync/boxes"/>
+
+    <!-- <arg name="camera_pose_topic" value="/sync/local_position/pose"/> -->
+    <!-- <arg name="depth_topic" value="/sync/depth/image_raw"/> -->
+    <!-- <arg name="gray_topic" value="/sync/color/image_raw"/> -->
+    <!-- <arg name="boxes_topic" value="/sync/boxes"/> -->
 
 
     <!-- topic of point cloud measurement, such as from LIDAR  -->

@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(plan_env)
 
-find_package(OpenCV 4 REQUIRED)
 
 find_package(catkin REQUIRED COMPONENTS
   roscpp
@@ -12,8 +11,9 @@ find_package(catkin REQUIRED COMPONENTS
   cv_bridge
   message_filters
   depth_list
-)
-
+  )
+  
+find_package(OpenCV 4.2 REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(PCL 1.7 REQUIRED)
 
@@ -30,7 +30,7 @@ include_directories(
     ${catkin_INCLUDE_DIRS}
     ${Eigen3_INCLUDE_DIRS} 
     ${PCL_INCLUDE_DIRS}
-    ${OpenCV_INCLUDE_DIRS}
+    # ${OpenCV_INCLUDE_DIRS}
 )
 
 link_directories(${PCL_LIBRARY_DIRS})
@@ -46,7 +46,7 @@ add_library( plan_env
 target_link_libraries( plan_env
     ${catkin_LIBRARIES} 
     ${PCL_LIBRARIES} 
-    ${OpenCV_LIBRARIES}
+    # ${OpenCV_LIBRARIES}
     )  
 
 add_executable(obj_generator

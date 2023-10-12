@@ -159,10 +159,10 @@ void SDFMap::initMap(ros::NodeHandle& nh) {
   canny_pub_ = node_.advertise<sensor_msgs::Image>("/sdf_map/canny", 10);
 
   boxes_sub_.reset(new message_filters::Subscriber<detection_msgs::BoundingBoxes>(node_, "/sdf_map/boxes", 50));
-  color_sub_.reset(new message_filters::Subscriber<sensor_msgs::Image>(node_, "/sdf_map/color", 50));
+  gray_sub_.reset(new message_filters::Subscriber<sensor_msgs::Image>(node_, "/sdf_map/gray", 50));
   
   sync_image_boxes_.reset(new message_filters::Synchronizer<SyncPolicyImageBoxes>
-        (SyncPolicyImageBoxes(500), *color_sub_, *depth2_sub_, *boxes_sub_));
+        (SyncPolicyImageBoxes(500), *gray_sub_, *depth2_sub_, *boxes_sub_));
   sync_image_boxes_->registerCallback(boost::bind(&SDFMap::depthBoxesCallback, this, _1, _2, _3));
 
   // use odometry and point cloud
@@ -392,7 +392,7 @@ int SDFMap::setCacheOccupancy(Eigen::Vector3d pos, int occ) {
   return idx_ctns;
 }
 
-void SDFMap::depthBoxesCallback(const sensor_msgs::Image::ConstPtr& color, const sensor_msgs::Image::ConstPtr& depth, const detection_msgs::BoundingBoxes::ConstPtr& boxes)
+void SDFMap::depthBoxesCallback(const sensor_msgs::Image::ConstPtr& gray, const sensor_msgs::Image::ConstPtr& depth, const detection_msgs::BoundingBoxes::ConstPtr& boxes)
 {
   if (boxes->bounding_boxes.empty()) return;
   if (db_.check_box_) return;
@@ -404,24 +404,26 @@ void SDFMap::depthBoxesCallback(const sensor_msgs::Image::ConstPtr& color, const
       best_box = box;
   }
 
-  if (best_box.probability <= dp_.box_threshold) return;
+  if (best_box.probability < dp_.box_threshold) return;
 
-  cv_bridge::CvImagePtr cv_ptr_color, cv_ptr_depth;
+  cv_bridge::CvImagePtr cv_ptr_gray, cv_ptr_depth;
+  cv::Mat gray_img;
+  cv::Mat depth_img;
 
-  cv_ptr_color = cv_bridge::toCvCopy(color, sensor_msgs::image_encodings::BGR8);
+  
+  cv_ptr_gray = cv_bridge::toCvCopy(gray, sensor_msgs::image_encodings::MONO8);
   cv_ptr_depth = cv_bridge::toCvCopy(depth, sensor_msgs::image_encodings::TYPE_32FC1);
 
-  cv::Mat cv_gray_img;
-  cv::cvtColor(cv_ptr_color->image, cv_gray_img, cv::COLOR_BGR2GRAY);
-
-  cv::GaussianBlur(cv_gray_img, cv_gray_img, cv::Size(dp_.gaussian, dp_.gaussian), 1.5);
+  
+  cv::GaussianBlur(cv_ptr_gray->image, cv_ptr_gray->image, cv::Size(dp_.gaussian, dp_.gaussian), 1.5);
 
   cv::Mat cv_edge_img;
-  cv::Canny(cv_gray_img, cv_edge_img, dp_.canny_min, dp_.canny_max);
+  cv::Canny(cv_ptr_gray->image, cv_edge_img, dp_.canny_min, dp_.canny_max);
 
   // Test_3 ========================================
   // Canny 영역에 해당하는 Image 픽셀들에 대해서 depth 값 추출
 
+  
   std::vector<float> depth_list;
 
   cv::Rect roi(best_box.xmin, best_box.ymin, best_box.xmax - best_box.xmin, best_box.ymax - best_box.ymin);
@@ -432,7 +434,7 @@ void SDFMap::depthBoxesCallback(const sensor_msgs::Image::ConstPtr& color, const
   for (int i = 0; i < non_zero_locations.total(); i++)
   {
     float depth = cv_ptr_depth->image.at<float>(non_zero_locations.at<cv::Point>(i));
-    if (depth != 0 && depth <= 5000.0) // Assuming that 0 means invalid data
+    if (depth != 0 && depth <= 7*mp_.k_depth_scaling_factor_) // Assuming that 0 means invalid data
       depth_list.push_back(depth);
   }
   // End_Test_3 ====================================
@@ -512,7 +514,11 @@ void SDFMap::depthBoxesCallback(const sensor_msgs::Image::ConstPtr& color, const
   // // End_Original =========================
 
 
-  if (depth_list.size() <= 500) return;
+  if (depth_list.size() <= 500) 
+  {
+    printf("Small Size of the depth list : %ld \n", depth_list.size()); 
+    return;
+  }
 
   std::sort(depth_list.begin(), depth_list.end());
   // double median = depth_list[int(depth_list.size() * 0.5)] / mp_.k_depth_scaling_factor_;
@@ -521,7 +527,7 @@ void SDFMap::depthBoxesCallback(const sensor_msgs::Image::ConstPtr& color, const
   double average = std::accumulate(depth_list.begin(), depth_list.end(), 0.0) / depth_list.size();
 
 
-  // printf("[num : %ld][median : %lf] [average : %lf] \n", depth_list.size(), median, average);
+  printf("[num : %ld][median : %lf] [average : %lf] \n", depth_list.size(), median, average);
 
   double distance = average / mp_.k_depth_scaling_factor_;
   if (distance < mp_.depth_filter_mindist_ || distance > mp_.depth_filter_maxdist_)

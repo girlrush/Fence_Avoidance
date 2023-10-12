@@ -6,7 +6,7 @@
   <arg name="odometry_topic"/>
   <arg name="camera_pose_topic"/>
   <arg name="depth_topic"/>
-  <arg name="color_topic"/>
+  <arg name="gray_topic"/>
   <arg name="boxes_topic"/>
   <arg name="cloud_topic"/>
 
@@ -39,7 +39,7 @@
     <remap from = "/sdf_map/pose"   to = "$(arg camera_pose_topic)"/>
     
     <remap from = "/sdf_map/depth" to = "$(arg depth_topic)"/>
-    <remap from = "/sdf_map/color" to = "$(arg color_topic)"/>
+    <remap from = "/sdf_map/gray" to = "$(arg gray_topic)"/>
     <remap from = "/sdf_map/boxes" to = "$(arg boxes_topic)"/>
 
     <!-- replanning method -->
@@ -106,7 +106,7 @@
     <param name="sdf_map/canny_min" value="50"/>
     <param name="sdf_map/canny_max" value="150"/>
     <param name="sdf_map/gaussian" value="3"/>
-    <param name="sdf_map/box_thres" value="0.5"/>
+    <param name="sdf_map/box_thres" value="0.8"/>
 
   <!-- planner manager -->
     <param name="manager/max_vel" value="$(arg max_vel)" type="double"/>

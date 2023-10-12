@@ -278,7 +278,7 @@ private:
   void visCallback(const ros::TimerEvent& /*event*/);
 
   // Get bounding box
-  void depthBoxesCallback(const sensor_msgs::Image::ConstPtr& color, const sensor_msgs::Image::ConstPtr& depth, const detection_msgs::BoundingBoxes::ConstPtr& boxes);
+  void depthBoxesCallback(const sensor_msgs::Image::ConstPtr& gray, const sensor_msgs::Image::ConstPtr& depth, const detection_msgs::BoundingBoxes::ConstPtr& boxes);
 
   // main update process
   void projectDepthImage();
@@ -306,7 +306,7 @@ private:
   ros::NodeHandle node_;
   shared_ptr<message_filters::Subscriber<sensor_msgs::Image>> depth_sub_;
   shared_ptr<message_filters::Subscriber<sensor_msgs::Image>> depth2_sub_;
-  shared_ptr<message_filters::Subscriber<sensor_msgs::Image>> color_sub_;
+  shared_ptr<message_filters::Subscriber<sensor_msgs::Image>> gray_sub_;
   shared_ptr<message_filters::Subscriber<detection_msgs::BoundingBoxes>> boxes_sub_;
   shared_ptr<message_filters::Subscriber<geometry_msgs::PoseStamped>> pose_sub_;
   shared_ptr<message_filters::Subscriber<nav_msgs::Odometry>> odom_sub_;

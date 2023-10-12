@@ -11,12 +11,11 @@
     <!-- <arg name="depth_topic" value="/camera/aligned_depth_to_color/image_raw"/> -->
 
     <!-- Zed 2i-->
-    <arg name="color_topic" value="/zed2i/zed_node/left/image_rect_color"/>
+    <arg name="gray_topic" value="/zed2i/zed_node/left/image_rect_gray"/>
     <arg name="depth_topic" value="/zed2i/zed_node/depth/depth_registered"/>
     
     <arg name="pose_topic" value="/mavros/local_position/pose"/>
     <arg name="odom_topic" value="/mavros/local_position/odom"/>
-
 
     <arg name="takeoff_height" value="2.0"/>
 
@@ -24,7 +23,7 @@
     <!-- Time synchronizer of topics-->
     <node pkg="plan_px4" name="time_sync_node" type="time_sync_node">
         <remap from="/boxes" to="$(arg boxes_topic)"/>
-        <remap from="/color" to="$(arg color_topic)"/>
+        <remap from="/gray" to="$(arg gray_topic)"/>
         <remap from="/depth" to="$(arg depth_topic)"/>
         <remap from="/pose" to="$(arg pose_topic)"/>
         <remap from="/odom" to="$(arg odom_topic)"/>

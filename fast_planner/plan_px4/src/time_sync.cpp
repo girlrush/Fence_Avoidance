@@ -8,14 +8,14 @@
 using namespace std;
 using namespace sensor_msgs;
 
-ros::Publisher pub_color;
+ros::Publisher pub_gray;
 ros::Publisher pub_depth;
 ros::Publisher pub_boxes;
 
 ros::Publisher pub_pose;
 ros::Publisher pub_odom;
 
-Image color_msg;
+Image gray_msg;
 Image depth_msg;
 
 detection_msgs::BoundingBoxes boxes_msg;
@@ -34,12 +34,12 @@ void cb_boxes(const detection_msgs::BoundingBoxesConstPtr& boxes)
     pub_boxes.publish(boxes_msg);
 }
 
-void cb_color(const sensor_msgs::ImageConstPtr& color)
+void cb_gray(const sensor_msgs::ImageConstPtr& gray)
 {
-    color_msg = *color;
-    color_msg.header.stamp = ros::Time::now();
+    gray_msg = *gray;
+    gray_msg.header.stamp = ros::Time::now();
 
-    pub_color.publish(color_msg);
+    pub_gray.publish(gray_msg);
 }
 
 void cb_depth(const sensor_msgs::ImageConstPtr& depth)
@@ -72,14 +72,14 @@ int main(int argc, char** argv)
     ros::init(argc, argv, "time_sync_node");
     ros::NodeHandle nh;
 
-    pub_color = nh.advertise<Image>("/sync/color/image_raw", 1);
+    pub_gray = nh.advertise<Image>("/sync/gray/image_raw", 1);
     pub_depth = nh.advertise<Image>("/sync/depth/image_raw", 1);
     pub_boxes = nh.advertise<detection_msgs::BoundingBoxes>("/sync/boxes", 1);
 
     pub_pose = nh.advertise<geometry_msgs::PoseStamped>("/sync/local_position/pose", 1);
     pub_odom = nh.advertise<nav_msgs::Odometry>("/sync/local_position/odom", 1);
 
-    ros::Subscriber sub_color = nh.subscribe<Image>("/color", 10, &cb_color);
+    ros::Subscriber sub_gray = nh.subscribe<Image>("/gray", 10, &cb_gray);
     ros::Subscriber sub_depth = nh.subscribe<Image>("/depth", 10, &cb_depth);
     ros::Subscriber sub_boxes = nh.subscribe<detection_msgs::BoundingBoxes>("/boxes", 10, &cb_boxes);
 
