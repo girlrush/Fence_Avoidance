@@ -115,10 +115,12 @@ struct MappingParameters {
 };
 
 struct DistanceExtractParam {
-  int canny_min;
-  int canny_max;
-  int gaussian;
-  double box_threshold;
+  int canny_min_;
+  int canny_max_;
+  int gaussian_;
+  double box_threshold_;
+  double shrink_box_;
+  bool enable_pub_canny_;
 };
 
 struct BoxData

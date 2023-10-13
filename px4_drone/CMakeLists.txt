@@ -119,6 +119,7 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
+  SYSTEM
   include
   include/${PROJECT_NAME}
   ${catkin_INCLUDE_DIRS}
@@ -126,6 +127,8 @@ include_directories(
   /usr/include/eigen3
 
 )
+
+set(CMAKE_CXX_FLAGS "-std=c++14 ${CMAKE_CXX_FLAGS} -O3 -Wall")
 
 ## Declare a C++ library
 

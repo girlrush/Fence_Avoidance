@@ -76,10 +76,12 @@ void SDFMap::initMap(ros::NodeHandle& nh) {
   node_.param("sdf_map/local_map_margin", mp_.local_map_margin_, 1);
   node_.param("sdf_map/ground_height", mp_.ground_height_, 1.0);
 
-  node_.param("sdf_map/canny_min", dp_.canny_min, 0);
-  node_.param("sdf_map/canny_max", dp_.canny_max, 360);
-  node_.param("sdf_map/gaussian", dp_.gaussian, 3);
-  node_.param("sdf_map/box_thres", dp_.box_threshold, 0.5);
+  node_.param("sdf_map/canny_min", dp_.canny_min_, 0);
+  node_.param("sdf_map/canny_max", dp_.canny_max_, 360);
+  node_.param("sdf_map/gaussian", dp_.gaussian_, 3);
+  node_.param("sdf_map/box_thres", dp_.box_threshold_, 0.5);
+  node_.param("sdf_map/shrink_box", dp_.shrink_box_, 0.0);
+  node_.param("sdf_map/enable_pub_canny", dp_.enable_pub_canny_, false);
 
 
   mp_.local_bound_inflate_ = max(mp_.resolution_, mp_.local_bound_inflate_);
@@ -130,7 +132,7 @@ void SDFMap::initMap(ros::NodeHandle& nh) {
   md_.tmp_buffer2_ = vector<double>(buffer_size, 0);
   md_.raycast_num_ = 0;
 
-  md_.proj_points_.resize(640 * 480 / mp_.skip_pixel_ / mp_.skip_pixel_);
+  md_.proj_points_.resize(1104 * 621 / mp_.skip_pixel_ / mp_.skip_pixel_);
   md_.proj_points_cnt = 0;
 
   md_.fence_buffer_inflate_ = vector<char>(buffer_size, 0);
@@ -404,148 +406,84 @@ void SDFMap::depthBoxesCallback(const sensor_msgs::Image::ConstPtr& gray, const 
       best_box = box;
   }
 
-  if (best_box.probability < dp_.box_threshold) return;
+  if (best_box.probability < dp_.box_threshold_) return;
+
+  float width = best_box.xmax - best_box.xmin;
+  float height = best_box.ymax - best_box.ymin;
+  float shrink_width = width * dp_.shrink_box_;
+  float shrink_height = height * dp_.shrink_box_;
+
+  printf("Depth size [%dx%d]\n", depth->width, depth->height);
+  best_box.xmin = std::max(0.0f, best_box.xmin + shrink_width / 2);
+  best_box.xmax = std::min(static_cast<float>(depth->width-1), best_box.xmax - shrink_width / 2);
+  best_box.ymin = std::max(0.0f, best_box.ymin + shrink_height / 2);
+  best_box.ymax = std::min(static_cast<float>(depth->height-1), best_box.ymax - shrink_height / 2);
+
+  printf("shrink box area : [x: %ld, %ld][y: %ld, %ld]\n", best_box.xmin, best_box.xmax, best_box.ymin, best_box.ymax);
 
   cv_bridge::CvImagePtr cv_ptr_gray, cv_ptr_depth;
-  cv::Mat gray_img;
-  cv::Mat depth_img;
-
-  
   cv_ptr_gray = cv_bridge::toCvCopy(gray, sensor_msgs::image_encodings::MONO8);
   cv_ptr_depth = cv_bridge::toCvCopy(depth, sensor_msgs::image_encodings::TYPE_32FC1);
 
-  
-  cv::GaussianBlur(cv_ptr_gray->image, cv_ptr_gray->image, cv::Size(dp_.gaussian, dp_.gaussian), 1.5);
+  /* Debug ======================================= */
+  /* 바운딩 박스 영역 내의 depth 평균 출력 */
+  // cv::Rect roi_debug(best_box.xmin, best_box.ymin, best_box.xmax - best_box.xmin, best_box.ymax - best_box.ymin);
+  // cv::Mat region_debug = cv_ptr_depth->image(roi_debug);
 
-  cv::Mat cv_edge_img;
-  cv::Canny(cv_ptr_gray->image, cv_edge_img, dp_.canny_min, dp_.canny_max);
+  // cv::Mat valid_mask_debug;
+  // cv::inRange(region_debug, std::numeric_limits<float>::min(), std::numeric_limits<float>::max(), valid_mask_debug);
 
-  // Test_3 ========================================
-  // Canny 영역에 해당하는 Image 픽셀들에 대해서 depth 값 추출
+  // cv::Scalar mean_scalar_debug = cv::mean(region_debug, valid_mask_debug);
 
-  
-  std::vector<float> depth_list;
+  // double mean_depth_debug = mean_scalar_debug[0];
+  // printf("Average Depth in the ROI : %.2lf m \n", mean_depth_debug);
 
+  // return;
+  /* End Debug ======================================= */
+
+  /* Test 1 ======================================= */
+  /* Canny 이미지에서 box 영역의 depth 값 평균 추출*/
+  cv::Mat gaus_img;
+  cv::GaussianBlur(cv_ptr_gray->image, gaus_img, cv::Size(dp_.gaussian_, dp_.gaussian_), 1.5);
+
+  // Apply Canny Edge Detector
+  cv::Mat edge_img;
+  cv::Canny(gaus_img, edge_img, dp_.canny_min_, dp_.canny_max_);
+
+  // Extract bounding box area from both Canny edge image and depth image
   cv::Rect roi(best_box.xmin, best_box.ymin, best_box.xmax - best_box.xmin, best_box.ymax - best_box.ymin);
-  cv::Mat roi_img = cv_edge_img(roi);
-  cv::Mat non_zero_locations;
-  cv::findNonZero(roi_img, non_zero_locations);
+  cv::Mat region_edges = edge_img(roi);
+  cv::Mat region_depth = cv_ptr_depth->image(roi);
 
-  for (int i = 0; i < non_zero_locations.total(); i++)
-  {
-    float depth = cv_ptr_depth->image.at<float>(non_zero_locations.at<cv::Point>(i));
-    if (depth != 0 && depth <= 7*mp_.k_depth_scaling_factor_) // Assuming that 0 means invalid data
-      depth_list.push_back(depth);
-  }
-  // End_Test_3 ====================================
+  // Mask to filter out invalid depth values (nan, inf, -inf)
+  cv::Mat valid_mask;
+  cv::inRange(region_depth, 0.0, std::numeric_limits<float>::max(), valid_mask);
 
+  // Combine the valid mask with the Canny edges to get depth values of only white pixels in the Canny edge image
+  region_edges = region_edges & valid_mask;
+  cv::Mat masked_depth;
+  region_depth.copyTo(masked_depth, region_edges);
 
-  // // Test_2 ===================================== 
-  // // 모든 Depth Image 픽셀들에 대해서 depth 값 추출
-  
-  // std::vector<float> depth_list;
+  cv::Scalar mean_scalar = cv::mean(masked_depth, region_edges);
 
-  // int rows = cv_ptr_depth->image.rows;
-  // int cols = cv_ptr_depth->image.cols;
+  double mean_depth = mean_scalar[0];
+  printf("Average Depth in the Canny Edges within bounding box: %.2lf m \n", mean_depth);
 
-  // for (int y = 0; y < rows; y++)
-  // {
-  //   for (int x = 0; x < cols; x++)
-  //   {
-  //     float depth = cv_ptr_depth->image.at<float>(y, x);
-  //     if (depth != 0 && depth <= 5.0) // Assuming that 0 means invalid data
-  //       depth_list.push_back(depth);
-  //   }
-  // }
-  
-  // // End_Test_2 ============================================
-
-
-  // // Test_1 =====================================  
-  // // Contour 를 활용한 거리 추정 -> Not working
-  // cv::Mat dilated;
-  // cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3));
-  // cv::dilate(cv_edge_img, dilated, kernel, cv::Point(-1, -1), 2);
-
-  // std::vector<std::vector<cv::Point>> contours;
-  // cv::findContours(dilated, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
-
-  // std::vector<uint16_t> depth_list;
-
-  // for (const auto& contour : contours) {
-  //       for (int y = 0; y < cv_ptr_depth->image.rows; ++y) {
-  //           for (int x = 0; x < cv_ptr_depth->image.cols; ++x) {
-  //               if (cv::pointPolygonTest(contour, cv::Point2f(x, y), false) == 1) {
-  //                   // (x, y)는 철조망 내부의 픽셀입니다.
-  //                   uint16_t depth = cv_ptr_depth->image.at<uint16_t>(y, x);
-
-  //                   if (depth != 0 && depth <= 5000)
-  //                     depth_list.push_back(depth);
-  //               }
-  //           }
-  //       }
-  //   }
-
-  // cv::drawContours(cv_edge_img, contours, -1, cv::Scalar(0, 255, 0), 4); // 초록색으로 contour 그리기
-
-  // cv_bridge::CvImage canny_img;
-  // canny_img.encoding = "mono8";
-  // canny_img.image = cv_edge_img;
-  // sensor_msgs::Image canny_msg = *canny_img.toImageMsg();
-
-  // canny_pub_.publish(canny_msg);
-  // // End_Test_1 =======================================
-
-
-  // // Original =============================
-  // cv::Rect roi(best_box.xmin, best_box.ymin, best_box.xmax - best_box.xmin, best_box.ymax - best_box.ymin);
-  // // cv::Mat roi_img = cv_gray_img(roi);
-  // cv::Mat roi_img = cv_edge_img(roi);
-  // cv::Mat non_zero_locations;
-  // cv::findNonZero(roi_img, non_zero_locations);
-
-  // std::vector<uint16_t> depth_list;
-  // for (int i = 0; i < non_zero_locations.total(); i++)
-  // {
-  //   uint16_t depth = cv_ptr_depth->image.at<uint16_t>(non_zero_locations.at<cv::Point>(i));
-  //   if (depth != 0 && depth <= 5000) // Assuming that 0 means invalid data
-  //     depth_list.push_back(depth);
-  // }
-  // // End_Original =========================
-
-
-  if (depth_list.size() <= 500) 
-  {
-    printf("Small Size of the depth list : %ld \n", depth_list.size()); 
-    return;
-  }
-
-  std::sort(depth_list.begin(), depth_list.end());
-  // double median = depth_list[int(depth_list.size() * 0.5)] / mp_.k_depth_scaling_factor_;
-  // double average = std::accumulate(depth_list.begin(), depth_list.end(), 0.0) / depth_list.size() / mp_.k_depth_scaling_factor_;
-  double median = depth_list[int(depth_list.size() * 0.5)];
-  double average = std::accumulate(depth_list.begin(), depth_list.end(), 0.0) / depth_list.size();
-
-
-  printf("[num : %ld][median : %lf] [average : %lf] \n", depth_list.size(), median, average);
-
-  double distance = average / mp_.k_depth_scaling_factor_;
-  if (distance < mp_.depth_filter_mindist_ || distance > mp_.depth_filter_maxdist_)
-    return;
-  
   db_.check_box_ = true;
   db_.last_box_ = best_box;
   db_.last_pos_ = md_.camera_pos_;
-  db_.dist_ = average / mp_.k_depth_scaling_factor_;
-
-  // depth_list::DepthList depth_list_msg;
-  // depth_list_msg.data = depth_list;
-  // depth_list_pub_.publish(depth_list_msg);
+  db_.dist_ = mean_depth / mp_.k_depth_scaling_factor_;
 
 
-  // sensor_msgs::Image canny_msg;
-  // canny_pub_.publish(cv_bridge::CvImage(std_msgs::Header(), "mono8", cv_edge_img).toImageMsg());
- 
+  if (dp_.enable_pub_canny_){
+    cv::rectangle(edge_img, roi, cv::Scalar(255, 0, 0), 2);
+    canny_pub_.publish(cv_bridge::CvImage(std_msgs::Header(), "mono8", edge_img).toImageMsg());
+    // printf("Publish canny edge image\n");
+  }
+  
+  return;
+
+  /* End Test 1 =======================================*/
 }
 
 // Depth Image 를 3차원 좌표로 변환함
@@ -578,7 +516,6 @@ void SDFMap::projectDepthImage() {
 
     // 철조망이 감지가 되면 해당 영역을 occupied 로 설정을 해두고, id 또는 address 를 저장을 해둔다.
     // 만약 나중에 해당 위치를 empty 로 만들려고 하면, 이를 무시하도록 하자.
-
 
     // 일단 이 부분에서 철조망에 해당하는 3차원 좌표를 다른곳에 저장해두자.
     for (int v = mp_.depth_filter_margin_; v < rows - mp_.depth_filter_margin_; v += mp_.skip_pixel_)

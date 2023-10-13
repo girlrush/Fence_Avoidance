@@ -29,8 +29,8 @@
         <remap from="/depth" to="$(arg depth_topic)"/>
         <remap from="/pose" to="$(arg pose_topic)"/>
         <remap from="/odom" to="$(arg odom_topic)"/>
-    </node>
-     -->
+    </node> -->
+    
 
     
     <!-- Convert the trajectory to mavros topic-->
