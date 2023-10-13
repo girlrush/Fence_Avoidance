@@ -22,6 +22,7 @@
     <node pkg="topic_tools" type="relay" name="topic_relay"
     args="/zed2i/zed_node/pose /mavros/vision_pose/pose"/>s
 
+
     <!-- Time synchronizer of topics-->
     <!-- <node pkg="plan_px4" name="time_sync_node" type="time_sync_node">
         <remap from="/boxes" to="$(arg boxes_topic)"/>
@@ -29,8 +30,7 @@
         <remap from="/depth" to="$(arg depth_topic)"/>
         <remap from="/pose" to="$(arg pose_topic)"/>
         <remap from="/odom" to="$(arg odom_topic)"/>
-    </node> -->
-    
+    </node> -->    
 
     
     <!-- Convert the trajectory to mavros topic-->

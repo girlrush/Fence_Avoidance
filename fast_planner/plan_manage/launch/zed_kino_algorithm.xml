@@ -83,7 +83,7 @@
     <param name="sdf_map/depth_filter_maxdist"   value="5.0"/>
     <param name="sdf_map/depth_filter_mindist"   value="0.2"/>
     <param name="sdf_map/depth_filter_margin"    value="2"/>
-    <param name="sdf_map/k_depth_scaling_factor" value="1000.0"/>
+    <param name="sdf_map/k_depth_scaling_factor" value="1.0"/>
     <param name="sdf_map/skip_pixel" value="2"/>
     <!-- local fusion -->
     <param name="sdf_map/p_hit"  value="0.65"/>
@@ -107,6 +107,8 @@
     <param name="sdf_map/canny_max" value="150"/>
     <param name="sdf_map/gaussian" value="3"/>
     <param name="sdf_map/box_thres" value="0.8"/>
+    <param name="sdf_map/shrink_box" value="0"/>
+    <param name="sdf_map/enable_pub_canny" value="false"/>
 
   <!-- planner manager -->
     <param name="manager/max_vel" value="$(arg max_vel)" type="double"/>

@@ -8,7 +8,6 @@
 
   <!-- topic of your odometry such as VIO or LIO -->
   <arg name="odom_topic" value="/mavros/local_position/odom"/>
-  <!-- <arg name="odom_topic" value="/sync/local_position/odom"/> -->
 
   <!-- main algorithm params -->
   <include file="$(find plan_manage)/launch/kino_algorithm.xml">
@@ -26,13 +25,6 @@
     <arg name="gray_topic" value="/zed2i/zed_node/left/image_rect_gray"/>
     <arg name="boxes_topic" value="/yolov5/detections"/>
 
-
-    <!-- <arg name="camera_pose_topic" value="/sync/local_position/pose"/> -->
-    <!-- <arg name="depth_topic" value="/sync/depth/image_raw"/> -->
-    <!-- <arg name="gray_topic" value="/sync/gray/image_raw"/> -->
-    <!-- <arg name="boxes_topic" value="/sync/boxes"/> -->
-
-
     <!-- topic of point cloud measurement, such as from LIDAR  -->
     <!-- don't set camera pose and depth, if you already set this one! -->
     <arg name="cloud_topic" value="/pcl_render_node/cloud"/>
@@ -44,11 +36,17 @@
     <!-- <arg name="fx" value="606.3212890625"/> -->
     <!-- <arg name="fy" value="605.068603515625"/> -->
 
-    <!-- Zed2i camera intrinsic (640x360)-->
-    <arg name="cx" value="324.3072509765625"/>
+    <!-- Zed2i camera intrinsic (HD720 : 640x360)-->
+    <!-- <arg name="cx" value="324.3072509765625"/>
     <arg name="cy" value="182.96429443359375"/>
     <arg name="fx" value="262.8957824707031"/>
-    <arg name="fy" value="262.8957824707031"/>
+    <arg name="fy" value="262.8957824707031"/> -->
+
+    <!-- Zed2i camera intrinsic (2KHD : 1104x621) -->
+    <arg name="cx" value="561.4807739257812"/>
+    <arg name="cy" value="317.77362060546875"/>
+    <arg name="fx" value="528.470947265625"/>
+    <arg name="fy" value="528.470947265625"/>
 
     <!-- maximum velocity and acceleration the drone will reach -->
     <arg name="max_vel" value="0.5" /><!--Best=1.5-->
