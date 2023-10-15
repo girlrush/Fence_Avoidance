@@ -19,8 +19,8 @@
 
     <arg name="takeoff_height" value="2.0"/>
 
-    <node pkg="topic_tools" type="relay" name="topic_relay"
-    args="/zed2i/zed_node/pose /mavros/vision_pose/pose"/>s
+    <!-- <node pkg="topic_tools" type="relay" name="topic_relay"
+    args="/zed2i/zed_node/pose /mavros/vision_pose/pose"/> -->
 
     <!-- Time synchronizer of topics-->
     <!-- <node pkg="plan_px4" name="time_sync_node" type="time_sync_node">

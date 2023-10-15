@@ -459,8 +459,12 @@ void SDFMap::depthBoxesCallback(const sensor_msgs::Image::ConstPtr& gray, const 
   cv::Mat valid_mask;
   cv::inRange(region_depth, 0.0, std::numeric_limits<float>::max(), valid_mask);
 
+  cv::Mat depth_threshold_mask;
+  cv::inRange(region_depth, 0.0, 5*mp_.k_depth_scaling_factor_, depth_threshold_mask);
+
   // Combine the valid mask with the Canny edges to get depth values of only white pixels in the Canny edge image
-  region_edges = region_edges & valid_mask;
+  region_edges = region_edges & depth_threshold_mask;
+  
   cv::Mat masked_depth;
   region_depth.copyTo(masked_depth, region_edges);
 
