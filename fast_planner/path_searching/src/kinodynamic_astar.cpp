@@ -387,9 +387,9 @@ void KinodynamicAstar::retrievePath(PathNodePtr end_node)
 }
 double KinodynamicAstar::estimateHeuristic(Eigen::VectorXd x1, Eigen::VectorXd x2, double& optimal_time)
 {
-  const Vector3d dp = x2.head(3) - x1.head(3);
-  const Vector3d v0 = x1.segment(3, 3);
-  const Vector3d v1 = x2.segment(3, 3);
+  const Vector3d dp = x2.head(3) - x1.head(3); // p_ug - p_uc
+  const Vector3d v0 = x1.segment(3, 3); //v_uc
+  const Vector3d v1 = x2.segment(3, 3); //v_ug
 
   double c1 = -36 * dp.dot(dp);
   double c2 = 24 * (v0 + v1).dot(dp);
@@ -397,19 +397,24 @@ double KinodynamicAstar::estimateHeuristic(Eigen::VectorXd x1, Eigen::VectorXd x
   double c4 = 0;
   double c5 = w_time_;
 
+  // 4차 방정식의 해를 ts 에 저장
   std::vector<double> ts = quartic(c5, c4, c3, c2, c1);
 
   double v_max = max_vel_ * 0.5;
+  // 장애물을 고려하지 않고 현재 위치에서 목표 위치까지 직선거리를 최대소고 v_max 로 이동할 떄 걸리는 시간 (즉 가능한 최소 시간)
   double t_bar = (x1.head(3) - x2.head(3)).lpNorm<Infinity>() / v_max;
-  ts.push_back(t_bar);
-
+  ts.push_back(t_bar); // 만약 4차 방정식의 해답이 모두 현실적으로 구현 불가능할 경우를 대비하여 이상적인 시간 t_bar 를 넣어
+                       // 최악의 경우 t_bar 를 사용하여 cost 를 계산하여 비용을 출력하도록 한다.
   double cost = 100000000;
   double t_d = t_bar;
 
   for (auto t : ts)
   {
+    // 4차 방정식의 해 중 비현실적인 시간을 제거한다. (가능한 최소 시간 t_bar 보다 적은 시간으로 이동하는 것은 불가능하기 때문)
     if (t < t_bar)
       continue;
+    // 수식에서는 T를 곱하여 cost J*(T)를 계산 목표로 하지만 여기서는 T의 역수를 곱함으로써 
+    // 시간과 input control 비용에 반비례하는 비용 c를 계산한다
     double c = -c1 / (3 * t * t * t) - c2 / (2 * t * t) - c3 / t + w_time_ * t;
     if (c < cost)
     {
@@ -420,6 +425,7 @@ double KinodynamicAstar::estimateHeuristic(Eigen::VectorXd x1, Eigen::VectorXd x
 
   optimal_time = t_d;
 
+  // tie_breaker 는 1.0001로 아주 작은 가중치를 추가하여 여러 경로가 동일한 비용을 갖는 경우를 방지한다.
   return 1.0 * (1 + tie_breaker_) * cost;
 }
 
