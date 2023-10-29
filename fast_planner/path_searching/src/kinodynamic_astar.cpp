@@ -261,8 +261,11 @@ int KinodynamicAstar::search(Eigen::Vector3d start_pt, Eigen::Vector3d start_v, 
         }
 
         double time_to_goal, tmp_g_score, tmp_f_score;
+
+        // "다음 노드의 actual cost"는 "현재 노드의 cost" + "현재 노드에서 다음 노드로 이동하는데 필요한 비용" 으로 나타낼 수 있다.
+        // 따라서 input control um의 스칼라를 계산하여 다음과 같이 표현할 수 있다.
         tmp_g_score = (um.squaredNorm() + w_time_) * tau + cur_node->g_score;
-        tmp_f_score = tmp_g_score + lambda_heu_ * estimateHeuristic(pro_state, end_state, time_to_goal);
+        tmp_f_score = tmp_g_score + lambda_heu_ * estimateHeuristic(pro_state, end_state, time_to_goal); // lambda_heu_는 heuristic의 가중치이다
 
         // Compare nodes expanded from the same parent
         bool prune = false;
